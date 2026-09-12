@@ -458,6 +458,16 @@ let pieChart = null;
    INPUTS
 ========================= */
 
+function escapeHTML(value){
+    return String(value)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/\"/g,'&quot;')
+        .replace(/\'/g,'&#39;');
+}
+
+
 function renderInputs(){
 
     memberCount = parseInt(
@@ -498,7 +508,7 @@ function renderInputs(){
                 type="text"
                 id="name-${i}"
                 placeholder="Member ${i+1}"
-                value="${existing ? existing.name : ''}"
+                value="${escapeHTML(existing ? existing.name : '')}"
                 style="
                     padding:8px;
                     background:#222;
@@ -684,7 +694,7 @@ function buildUI(){
             <div class="bar-wrapper">
 
                 <div class="fixed-name" id="name-label-${i}">
-                    ${createFancyText(m.name)}
+                    ${createFancyText(escapeHTML(m.name))}
                 </div>
 
                 <div
@@ -977,7 +987,7 @@ function generatePieChart(){
                 ></div>
 
                 <div>
-                    ${m.name}
+                    ${escapeHTML(m.name)}
                 </div>
 
             </div>
