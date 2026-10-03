@@ -1,8 +1,8 @@
-Song Line Distribution Maker
+## Song Line Distribution Maker
 
 A browser tool for tracking and visualizing who sings or raps how much in a song. Press a button while an artist is singing/rapping and a live bar race shows each artist's share, followed by a pie chart and a breakdown of the final percentages.
 
-**[Live demo](YOUR-GITHUB-PAGES-LINK)**
+**[Live demo]https://intecodesk.github.io/Line-Distribution-with-Analyzer/**
 
 ## Features:
 - Works for any song with 1–20 artists, whether a band, group, duet or choir
@@ -25,3 +25,6 @@ No build step or install needed. Download the repo and open `index.html` in a br
 
 ## Built with
 HTML, CSS and vanilla JavaScript, plus [Chart.js](https://www.chartjs.org/) for the pie chart.
+
+## License
+© 2026 Kshittij Krishnan (intecodesk). All rights reserved. See [LICENSE](LICENSE).
