@@ -1,0 +1,1151 @@
+<!--
+  Song Line Distribution Maker
+  Copyright (c) 2026 Kshittij Krishnan (intecodesk). All rights reserved.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+/* On phones/tablets, open the mobile layout. Add ?view=desktop to the URL to force this layout. */
+if(!window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches
+   && !location.search.includes('view=desktop')){
+    location.replace('index.html');
+}
+</script>
+<meta charset="UTF-8" />
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+
+<title>Song Line Distribution Maker</title>
+<meta name="description" content="Create line distributions for any song. Track how long each artist sings and see the split as a chart." />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+    --bg-setup:#0f0f0f;
+    --card-setup:#1a1a1a;
+    --accent:#00d2ff;
+    --platform-bg:#ffffff;
+    --chart-grey:#bbbbbb;
+    --inactive-name:#8f8f8f;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg-setup);
+    color:white;
+    margin:0;
+    padding:0;
+    overflow-x:hidden;
+}
+
+/* =========================
+   SETUP SCREEN
+========================= */
+
+#setup-screen{
+    position:fixed;
+    inset:0;
+    background:var(--bg-setup);
+    z-index:1000;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:40px 20px;
+    overflow-y:auto;
+}
+
+.setup-card{
+    background:var(--card-setup);
+    padding:36px 40px;
+    border-radius:18px;
+    width:100%;
+    max-width:760px;
+    margin:auto;
+}
+
+.setup-title{
+    text-align:center;
+    margin:0 0 28px;
+    font-size:30px;
+}
+
+.setup-fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:24px;
+}
+
+.setup-label{
+    display:block;
+    font-size:13px;
+    color:#aaa;
+    margin-bottom:8px;
+}
+
+.setup-input{
+    width:100%;
+    padding:12px;
+    background:#222;
+    border:1px solid #444;
+    color:white;
+    border-radius:8px;
+    font-size:16px;
+}
+
+.setup-input:focus,
+.setup-artist-row input[type="text"]:focus{
+    outline:2px solid var(--accent);
+    outline-offset:0;
+}
+
+#artist-inputs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px 28px;
+}
+
+.setup-artist-row{
+    display:grid;
+    grid-template-columns:1fr 54px;
+    gap:10px;
+    align-items:center;
+}
+
+.setup-artist-row input[type="text"]{
+    min-width:0;
+    font-size:15px;
+    padding:10px !important;
+}
+
+.setup-artist-row input[type="color"]{
+    width:54px;
+    height:42px;
+    padding:0;
+    border:none;
+    background:none;
+    cursor:pointer;
+}
+
+.start-btn{
+    width:100%;
+    padding:16px;
+    background:var(--accent);
+    border:none;
+    border-radius:10px;
+    font-weight:bold;
+    font-size:1.1rem;
+    margin-top:28px;
+    cursor:pointer;
+    color:black;
+}
+
+.start-btn:hover{ filter:brightness(1.1); }
+
+/* =========================
+   MAIN WORKSPACE
+========================= */
+
+#main-workspace{
+    display:none;
+    width:100%;
+    padding:24px 48px 40px;
+    background:var(--platform-bg);
+    color:black;
+    min-height:100vh;
+    position:relative;
+    overflow:hidden;
+}
+
+.top-buttons{
+    position:fixed;
+    top:16px;
+    left:24px;
+    right:24px;
+    z-index:300;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    pointer-events:none;
+}
+
+.small-btn{
+    pointer-events:auto;
+    border:none;
+    background:white;
+    color:black;
+    border-radius:10px;
+    padding:10px 18px;
+    font-size:15px;
+    font-weight:900;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
+    cursor:pointer;
+}
+
+.small-btn:hover{ background:#f0f0f0; }
+
+.chart-area{
+    position:relative;
+    width:100%;
+    margin-top:70px;
+}
+
+.bar-container{
+    position:absolute;
+    width:100%;
+    display:flex;
+    align-items:center;
+    height:52px;
+    transition:top 0.4s cubic-bezier(0.4,0,0.2,1);
+    opacity:0;
+    visibility:hidden;
+}
+
+.bar-container.has-started{
+    opacity:1;
+    visibility:visible;
+}
+
+.timer-display{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:76px;
+    flex-shrink:0;
+    height:34px;
+    border:3px solid #d0d0d0;
+    border-radius:20px;
+    color:#777;
+    font-size:15px;
+    font-weight:900;
+    margin-right:8px;
+    background:white;
+    z-index:10;
+}
+
+.bar-wrapper{
+    position:relative;
+    display:flex;
+    align-items:center;
+    flex-grow:1;
+    height:40px;
+}
+
+.fixed-name{
+    position:absolute;
+    left:10px;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:5;
+    font-size:17px;
+    font-weight:900;
+    text-transform:uppercase;
+    pointer-events:none;
+    white-space:nowrap;
+    display:flex;
+}
+
+.letter{
+    position:relative;
+    display:inline-block;
+    color:var(--inactive-name);
+}
+
+.letter-base{
+    position:relative;
+    z-index:1;
+}
+
+.letter-fill{
+    position:absolute;
+    inset:0;
+    width:0%;
+    overflow:hidden;
+    color:white;
+    white-space:nowrap;
+    transition:width 0.02s linear;
+    z-index:2;
+}
+
+.bar{
+    position:absolute;
+    left:0;
+    height:38px;
+    border-radius:19px;
+    background:var(--chart-grey);
+    transition:width 0.05s linear;
+    z-index:1;
+}
+
+.active-row .timer-display{
+    border-color:currentColor;
+    color:inherit;
+}
+
+.active-row .bar{
+    filter:brightness(1.1);
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* =========================
+   PIE CHART SCREEN
+========================= */
+
+#stats-screen{
+    display:none;
+    min-height:100vh;
+    background:white;
+    color:black;
+    padding:24px;
+}
+
+.stats-wrapper{
+    max-width:1200px;
+    margin:auto;
+    margin-top:90px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:60px;
+    align-items:flex-start;
+    justify-content:center;
+}
+
+.chart-box{
+    width:520px;
+    max-width:90vw;
+}
+
+.stats-box{
+    flex:1;
+    min-width:320px;
+    max-width:560px;
+}
+
+.stats-title{
+    font-size:30px;
+    font-weight:900;
+    margin-bottom:24px;
+}
+
+.stat-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid #ddd;
+    font-size:18px;
+    font-weight:700;
+}
+
+.stat-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.color-dot{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+}
+
+/* =========================
+   REMOTE (click or use keyboard keys)
+========================= */
+
+.remote-pad{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    background:#111;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:8px;
+    padding:14px 24px;
+    border-top:2px solid #222;
+    z-index:100;
+}
+
+.remote-btn{
+    position:relative;
+    background:#222;
+    border:1px solid #333;
+    color:#999;
+    padding:18px 8px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:900;
+    text-align:center;
+    text-transform:uppercase;
+    cursor:pointer;
+    user-select:none;
+}
+
+.remote-btn:hover{ background:#2c2c2c; color:#ddd; }
+
+.remote-btn.active{
+    background:white;
+    color:black;
+    border-color:white;
+    transform:scale(0.97);
+}
+
+.key-hint{
+    position:absolute;
+    top:4px;
+    left:7px;
+    font-size:10px;
+    opacity:0.55;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- =========================
+     SETUP SCREEN
+========================= -->
+
+<div id="setup-screen">
+
+    <div class="setup-card">
+
+        <h2 class="setup-title">
+            Song Line Distribution Maker
+        </h2>
+
+        <div class="setup-fields">
+
+            <div>
+                <label class="setup-label" for="artist-count">Number of artists (1-20)</label>
+                <input
+                    type="number"
+                    id="artist-count"
+                    class="setup-input"
+                    min="1"
+                    max="20"
+                    value="8"
+                >
+            </div>
+
+            <div>
+                <label class="setup-label" for="cross-time">Seconds for the line to cross the screen</label>
+                <input
+                    type="number"
+                    id="cross-time"
+                    class="setup-input"
+                    min="5"
+                    value="20"
+                >
+            </div>
+
+        </div>
+
+        <div id="artist-inputs"></div>
+
+        <button class="start-btn" onclick="startApp()">
+            Generate Platform
+        </button>
+
+    </div>
+
+</div>
+
+<!-- =========================
+     MAIN SCREEN
+========================= -->
+
+<div id="main-workspace">
+
+    <div class="top-buttons">
+
+        <button class="small-btn" onclick="goBack()">
+            ← Back
+        </button>
+
+        <button class="small-btn" onclick="openStats()">
+            Pie Chart →
+        </button>
+
+    </div>
+
+    <div class="chart-area" id="chart"></div>
+
+</div>
+
+<!-- =========================
+     PIE CHART SCREEN
+========================= -->
+
+<div id="stats-screen">
+
+    <div class="top-buttons">
+
+        <button class="small-btn" onclick="closeStats()">
+            ← Back
+        </button>
+
+    </div>
+
+    <div class="stats-wrapper">
+
+        <div class="chart-box">
+            <canvas id="pieChart"></canvas>
+        </div>
+
+        <div class="stats-box">
+
+            <div class="stats-title">
+                Distribution Stats
+            </div>
+
+            <div id="stats-list"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- REMOTE -->
+
+<div class="remote-pad" id="remote"></div>
+
+<script>
+
+let SPEED = 10;
+
+const ROW_HEIGHT = 56;
+
+const KEYS = '1234567890QWERTYUIOP';
+
+let crossSeconds = 20;
+
+let artists = [];
+
+let artistCount = 8;
+
+let lastTimestamp = null;
+
+let animationId = null;
+
+let pieChart = null;
+
+/* =========================
+   INPUTS
+========================= */
+
+function escapeHTML(value){
+    return String(value)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/\"/g,'&quot;')
+        .replace(/\'/g,'&#39;');
+}
+
+
+function renderInputs(){
+
+    artistCount = Math.min(20, Math.max(1, parseInt(
+        document.getElementById('artist-count').value
+    ) || 8));
+
+    const container = document.getElementById('artist-inputs');
+
+    container.innerHTML = '';
+
+    const defaultColors = [
+        "#8e44ad",
+        "#e67e22",
+        "#3498db",
+        "#2ecc71",
+        "#e74c3c",
+        "#16a085",
+        "#f1c40f",
+        "#ff0080",
+        "#ff5e57",
+        "#00cec9",
+        "#6c5ce7",
+        "#fd79a8",
+        "#e17055",
+        "#00b894"
+    ];
+
+    for(let i=0;i<artistCount;i++){
+
+        const existing = artists[i];
+
+        const row = document.createElement('div');
+
+        row.className = 'setup-artist-row';
+
+        row.innerHTML = `
+            <input
+                type="text"
+                id="name-${i}"
+                placeholder="Artist ${i+1}"
+                value="${escapeHTML(existing ? existing.name : '')}"
+                style="
+                    padding:8px;
+                    background:#222;
+                    border:1px solid #444;
+                    color:white;
+                    border-radius:4px;
+                "
+            >
+
+            <input
+                type="color"
+                id="color-${i}"
+                value="${
+                    existing
+                    ? existing.color
+                    : defaultColors[i % defaultColors.length]
+                }"
+            >
+        `;
+
+        container.appendChild(row);
+    }
+}
+
+document
+.getElementById('artist-count')
+.addEventListener('input',renderInputs);
+
+renderInputs();
+
+/* =========================
+   START APP
+========================= */
+
+function startApp(){
+
+    artists = [];
+
+    document.getElementById('chart').innerHTML = '';
+
+    document.getElementById('remote').innerHTML = '';
+
+    artistCount = Math.min(20, Math.max(1, parseInt(
+        document.getElementById('artist-count').value
+    ) || 8));
+
+    const crossTime = parseFloat(
+        document.getElementById('cross-time').value
+    ) || 20;
+
+    crossSeconds = crossTime;
+
+    for(let i=0;i<artistCount;i++){
+
+        artists.push({
+            id:i,
+            name:document.getElementById(`name-${i}`).value || `ARTIST ${i+1}`,
+            color:document.getElementById(`color-${i}`).value,
+            time:0,
+            active:false,
+            started:false
+        });
+    }
+
+    document.getElementById('setup-screen').style.display = 'none';
+
+    document.getElementById('stats-screen').style.display = 'none';
+
+    document.getElementById('main-workspace').style.display = 'block';
+
+    document.getElementById('remote').style.display = 'grid';
+
+    document.body.style.background = 'white';
+
+    buildUI();
+
+    updateSpeed();
+
+    lastTimestamp = null;
+
+    if(animationId){
+
+        cancelAnimationFrame(animationId);
+    }
+
+    animationId = requestAnimationFrame(updateLoop);
+}
+
+/* =========================
+   BACK
+========================= */
+
+function goBack(){
+
+    if(animationId){
+
+        cancelAnimationFrame(animationId);
+    }
+
+    document.getElementById('setup-screen').style.display = 'flex';
+
+    document.getElementById('main-workspace').style.display = 'none';
+
+    document.getElementById('stats-screen').style.display = 'none';
+
+    document.getElementById('remote').style.display = 'none';
+
+    document.body.style.background = 'var(--bg-setup)';
+
+    renderInputs();
+
+    artists.forEach((m,i)=>{
+
+        if(document.getElementById(`name-${i}`)){
+
+            document.getElementById(`name-${i}`).value = m.name;
+
+            document.getElementById(`color-${i}`).value = m.color;
+        }
+    });
+}
+
+/* =========================
+   CREATE NAME
+========================= */
+
+function createFancyText(name){
+
+    return Array.from(name).map(rawLetter=>{
+
+        const letter = escapeHTML(rawLetter);
+
+        if(rawLetter === ' '){
+
+            return `<div class="letter" style="width:4px;"></div>`;
+        }
+
+        return `
+            <div class="letter">
+
+                <span class="letter-base">
+                    ${letter}
+                </span>
+
+                <span class="letter-fill">
+                    ${letter}
+                </span>
+
+            </div>
+        `;
+
+    }).join('');
+}
+
+/* =========================
+   BUILD UI
+========================= */
+
+function buildUI(){
+
+    const chart = document.getElementById('chart');
+
+    const remote = document.getElementById('remote');
+
+    chart.style.height = `${artists.length * ROW_HEIGHT}px`;
+
+    artists.forEach((m,i)=>{
+
+        const row = document.createElement('div');
+
+        row.className = 'bar-container';
+
+        row.id = `row-${i}`;
+
+        row.style.top = `${i * ROW_HEIGHT}px`;
+
+        row.style.color = m.color;
+
+        row.innerHTML = `
+
+            <div class="timer-display" id="time-${i}">
+                0.0s
+            </div>
+
+            <div class="bar-wrapper">
+
+                <div class="fixed-name" id="name-label-${i}">
+                    ${createFancyText(m.name)}
+                </div>
+
+                <div
+                    class="bar"
+                    id="bar-${i}"
+                    style="width:0px;"
+                ></div>
+
+            </div>
+        `;
+
+        chart.appendChild(row);
+
+        const btn = document.createElement('div');
+
+        btn.className = 'remote-btn';
+
+        btn.id = `btn-${i}`;
+
+        btn.textContent = m.name;
+
+        if(KEYS[i]){
+
+            const hint = document.createElement('span');
+
+            hint.className = 'key-hint';
+
+            hint.textContent = KEYS[i];
+
+            btn.appendChild(hint);
+        }
+
+        btn.addEventListener('pointerdown',(e)=>{
+
+            e.preventDefault();
+
+            toggleArtist(i);
+        });
+
+        remote.appendChild(btn);
+    });
+}
+
+/* =========================
+   NAME COLOR
+========================= */
+
+function updateNameColor(artistId){
+
+    const m = artists[artistId];
+
+    const currentWidth = m.time * SPEED;
+
+    const nameLabel = document.getElementById(`name-label-${artistId}`);
+
+    const letters = nameLabel.querySelectorAll('.letter');
+
+    letters.forEach(letter=>{
+
+        const fill = letter.querySelector('.letter-fill');
+
+        if(!fill) return;
+
+        const letterLeft = letter.offsetLeft + 10;
+
+        const letterWidth = letter.offsetWidth;
+
+        const overlap = currentWidth - letterLeft;
+
+        let fillPercent = (overlap / letterWidth) * 100;
+
+        fillPercent = Math.max(0,Math.min(100,fillPercent));
+
+        fill.style.width = `${fillPercent}%`;
+
+        if(m.active){
+
+            letter.style.color = m.color;
+        }
+        else{
+
+            letter.style.color = "var(--inactive-name)";
+        }
+    });
+}
+
+/* =========================
+   TOGGLE
+========================= */
+
+function toggleArtist(id){
+
+    artists[id].active = !artists[id].active;
+
+    if(
+        artists[id].active &&
+        !artists[id].started
+    ){
+
+        artists[id].started = true;
+
+        document
+        .getElementById(`row-${id}`)
+        .classList
+        .add('has-started');
+    }
+
+    const bar = document.getElementById(`bar-${id}`);
+
+    document
+    .getElementById(`btn-${id}`)
+    .classList
+    .toggle('active',artists[id].active);
+
+    document
+    .getElementById(`row-${id}`)
+    .classList
+    .toggle('active-row',artists[id].active);
+
+    bar.style.background = artists[id].active
+        ? artists[id].color
+        : 'var(--chart-grey)';
+
+    updateNameColor(id);
+}
+
+/* =========================
+   SIZING + KEYBOARD
+========================= */
+
+function updateSpeed(){
+
+    const wrapper = document.querySelector('.bar-wrapper');
+
+    if(wrapper){
+
+        SPEED = wrapper.clientWidth / crossSeconds;
+    }
+
+    const remote = document.getElementById('remote');
+
+    document.getElementById('main-workspace')
+    .style.paddingBottom = `${remote.offsetHeight + 30}px`;
+}
+
+window.addEventListener('resize',()=>{
+
+    if(
+        document.getElementById('main-workspace')
+        .style.display === 'block'
+    ){
+        updateSpeed();
+    }
+});
+
+document.addEventListener('keydown',(e)=>{
+
+    if(e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if(
+        document.getElementById('main-workspace')
+        .style.display !== 'block'
+    ) return;
+
+    const index = KEYS.indexOf(e.key.toUpperCase());
+
+    if(index >= 0 && index < artists.length){
+
+        toggleArtist(index);
+    }
+});
+
+/* =========================
+   UPDATE LOOP
+========================= */
+
+function updateLoop(timestamp){
+
+    if(!lastTimestamp){
+
+        lastTimestamp = timestamp;
+    }
+
+    const delta = Math.min((timestamp - lastTimestamp) / 1000, 0.25);
+
+    lastTimestamp = timestamp;
+
+    artists.forEach(m=>{
+
+        if(m.active){
+
+            m.time += delta;
+        }
+    });
+
+    render();
+
+    animationId = requestAnimationFrame(updateLoop);
+}
+
+/* =========================
+   RENDER
+========================= */
+
+function render(){
+
+    const sorted = [...artists]
+    .sort((a,b)=>b.time - a.time);
+
+    artists.forEach((m,i)=>{
+
+        const bar = document.getElementById(`bar-${i}`);
+
+        const timeDisp = document.getElementById(`time-${i}`);
+
+        const row = document.getElementById(`row-${i}`);
+
+        const currentWidth = m.time * SPEED;
+
+        bar.style.width = `${currentWidth}px`;
+
+        timeDisp.innerText = `${m.time.toFixed(1)}s`;
+
+        updateNameColor(i);
+
+        const rank = sorted.findIndex(
+            sm => sm.id === m.id
+        );
+
+        row.style.top = `${rank * ROW_HEIGHT}px`;
+    });
+}
+
+/* =========================
+   PIE CHART
+========================= */
+
+function openStats(){
+
+    document.getElementById('main-workspace').style.display = 'none';
+
+    document.getElementById('stats-screen').style.display = 'block';
+
+    document.getElementById('remote').style.display = 'none';
+
+    generatePieChart();
+}
+
+function closeStats(){
+
+    document.getElementById('stats-screen').style.display = 'none';
+
+    document.getElementById('main-workspace').style.display = 'block';
+
+    document.getElementById('remote').style.display = 'grid';
+
+    updateSpeed();
+}
+
+function generatePieChart(){
+
+    const totalTime = artists.reduce(
+        (sum,m)=>sum + m.time,
+        0
+    );
+
+    const labels = artists.map(m=>m.name);
+
+    const data = artists.map(m=>{
+
+        if(totalTime <= 0) return 0;
+
+        return Number(
+            ((m.time / totalTime) * 100).toFixed(1)
+        );
+    });
+
+    const colors = artists.map(m=>m.color);
+
+    const ctx = document
+        .getElementById('pieChart')
+        .getContext('2d');
+
+    if(pieChart){
+
+        pieChart.destroy();
+    }
+
+    pieChart = new Chart(ctx,{
+
+        type:'pie',
+
+        data:{
+            labels:labels,
+            datasets:[{
+                data:data,
+                backgroundColor:colors,
+                borderWidth:2,
+                borderColor:'#fff'
+            }]
+        },
+
+        options:{
+
+            responsive:true,
+
+            plugins:{
+
+                legend:{
+                    position:'bottom'
+                },
+
+                tooltip:{
+                    callbacks:{
+                        label:function(context){
+
+                            return `${context.label}: ${context.raw}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const statsList = document.getElementById('stats-list');
+
+    statsList.innerHTML = '';
+
+    const sorted = [...artists]
+        .sort((a,b)=>b.time - a.time);
+
+    sorted.forEach(m=>{
+
+        const percentage = totalTime <= 0
+            ? 0
+            : ((m.time / totalTime) * 100).toFixed(1);
+
+        const row = document.createElement('div');
+
+        row.className = 'stat-row';
+
+        row.innerHTML = `
+
+            <div class="stat-left">
+
+                <div
+                    class="color-dot"
+                    style="background:${m.color};"
+                ></div>
+
+                <div>
+                    ${escapeHTML(m.name)}
+                </div>
+
+            </div>
+
+            <div>
+                ${m.time.toFixed(1)}s • ${percentage}%
+            </div>
+        `;
+
+        statsList.appendChild(row);
+    });
+}
+
+</script>
+
+</body>
+</html>
