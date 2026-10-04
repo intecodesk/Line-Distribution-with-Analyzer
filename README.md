@@ -27,4 +27,4 @@ No build step or install needed. Download the repo and open `index.html` in a br
 HTML, CSS and vanilla JavaScript, plus [Chart.js](https://www.chartjs.org/) for the pie chart.
 
 ## License
-© 2026 Kshittij Krishnan (intecodesk). All rights reserved. See [LICENSE](LICENSE).
+© 2026 Kshittij Krishnan (intecodesk). All rights reserved. See [LICENSE](LICENSE.txt).
