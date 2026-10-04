@@ -1,4 +1,4 @@
-Copyright (c) 2026 Kshittij Krishnan (intecodesk). All rights reserved.
+Copyright © 2026 Kshittij Krishnan (intecodesk). All rights reserved.
 
 Permission is granted to download, view, execute and test the software for personal evaluation, educational evaluation, recruitment evaluation and similar non-development purposes.
 
